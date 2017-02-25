@@ -95,8 +95,7 @@ PowerShell.exe -windowstyle hidden `
             $shutdown += ($logsof_firstEventDate[$i].TimeCreated);
         }
     }
-	$startup
-	$shutdown
+
     #finding overall uptime of a perticular date/day
     for($i=0;$i -lt $startup.Count; $i++)
     {
@@ -126,5 +125,24 @@ PowerShell.exe -windowstyle hidden `
         Break
     }
 
-	Send-MailMessage -SmtpServer "smtp.gmail.com" -To "hardik.thaker@infosys.com" -From "skstpc"
+	function sendMail()
+	{
+		$Username = "skstpc.edu@gmail.com"
+		$Password= "skstpc123@gmail.com"
+		$message = new-object Net.Mail.MailMessage
+		$message.From = "skstpc.edu@gmail.com"
+		$message.To.Add("hardiik.thaker@infosys.com")
+		$message.Subject = "subject text here..."
+		$message.Body = "Your System was ON for " + $overalluptime +" on " + $firstEventDate.ToShortDateString()
+		#$attachment = New-Object Net.Mail.Attachment($attachmentpath);
+		#$message.Attachments.Add($attachment);
+
+		$smtp = new-object Net.Mail.SmtpClient("smtp.gmail.com", "587")
+		$smtp.EnableSSL = $true
+		$smtp.Credentials = New-Object System.Net.NetworkCredential($Username, $Password)
+		$smtp.send($message)
+		#$attachment.Dispose();
+	}
+
+	#sendMail;
 }
