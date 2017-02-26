@@ -2,8 +2,8 @@
 # EventLogs.ps1
 #
 Clear
-PowerShell.exe -windowstyle hidden `
-{
+#PowerShell.exe -windowstyle hidden `
+#{
     add-type -AssemblyName PresentationCore,PresentationFramework
     $ErrorActionPreference = “SilentlyContinue”
     
@@ -55,7 +55,19 @@ PowerShell.exe -windowstyle hidden `
         }
     }
     Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
-
+	$tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
+    $preElement = $null
+    foreach($item in $result)
+    {
+        if($item.Id -eq $preElement)
+        {
+            Continue
+        }
+        $tempResult += $item
+        $preElement = $item.Id
+    }
+    $result.Clear()
+    $result = $tempResult
 
     $firstEventDate = $result[0].TimeCreated.Date
 
@@ -145,4 +157,4 @@ PowerShell.exe -windowstyle hidden `
 	}
 
 	#sendMail;
-}
+#}
