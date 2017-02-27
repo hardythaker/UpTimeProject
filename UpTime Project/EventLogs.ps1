@@ -5,7 +5,7 @@ Clear
 #PowerShell.exe -windowstyle hidden `
 #{
     add-type -AssemblyName PresentationCore,PresentationFramework
-    $ErrorActionPreference = ìSilentlyContinueî
+    $ErrorActionPreference = ‚ÄúSilentlyContinue‚Äù
     
     #this fn will fetch the logs
     function getLogs($logstartTime)
@@ -51,7 +51,7 @@ Clear
         $dateForUptime++
         if($dateForUptime -ge ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month)))
         {
-            $ErrorActionPreference = ìStopî 
+            $ErrorActionPreference = ‚ÄúStop‚Äù 
         }
     }
     Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
@@ -83,9 +83,15 @@ Clear
     {
         #on a perticular date if the first event is of shutdown, then Consider that system was on form the mid-night 12am of that date
         
-		if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
+	if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
         {
-            $startup += $firstEventDate.Date;
+	        $findFirstLog += $result | Sort-Object TimeCreated | `
+		where{$_.TimeCreated -lt $logsof_firstEventDate[0].TimeCreated} | `
+		where{$_.Id -eq 6005} | `		
+		| select-object -Last 1 
+		$logsof_firstEventDate += $findFirstLog[-1]
+            	$startup += $logsof_firstEventDate[0].TimeCreated
+		#$startup += $firstEventDate.Date;
         }
         elseif($logsof_firstEventDate[$i].Id -eq 6005)
         {
