@@ -54,6 +54,7 @@ Clear
             $ErrorActionPreference = “Stop” 
         }
     }
+
     Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
 	$tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
     $preElement = $null
@@ -120,9 +121,11 @@ Clear
     
     try{
         $ButtonType = [System.Windows.MessageBoxButton]::OK
-        $MessageBoxTitle = "Test Popup"
-        $Messageboxbody = "Your System was ON for " + $overalluptime +" on " + $firstEventDate.ToShortDateString()
-        $MessageIcon = [System.Windows.MessageBoxImage]::Information
+        $MessageBoxTitle = "Conserve Energy"
+        #$Messageboxbody = "Your System has been running for " + $overalluptime +" on " + $firstEventDate.ToShortDateString()
+        $Messageboxbody = "Your System has been running for " + $overalluptime+". Please remember to turn off your system and monitor at the end of the day"
+        
+		$MessageIcon = [System.Windows.MessageBoxImage]::Information
         [System.Windows.MessageBox]::Show($Messageboxbody,$MessageboxTitle,$ButtonType,$messageicon)
     }
     Catch{
