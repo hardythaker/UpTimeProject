@@ -5,10 +5,10 @@ Clear
 #PowerShell.exe -windowstyle hidden `
 #{
     add-type -AssemblyName PresentationCore,PresentationFramework
-    $ErrorActionPreference = “SilentlyContinue”
+    $ErrorActionPreference = "SilentlyContinue"
     
     #this fn will fetch the logs
-    function getLogs($logstartTime)
+    function getLogs($logstartTime, $logEndTime = (Get-Date))
     {
         try{
             $result = Get-WinEvent -MaxEvents 1000 -FilterHashTable `
@@ -17,7 +17,8 @@ Clear
                 ID = 6005,6006 ; #42,1 For sleep Time Logs
                 ProviderName = "EventLog","Microsoft-Windows-Kernel-General","Microsoft-Windows-Kernel-Power";
                 Level=4; #4 = Information
-                StartTime = $logstartTime
+                StartTime = $logstartTime;
+			    EndTime = $logEndTime
             }`
             -Force -Oldest | Sort-Object TimeCreated -Unique | Select TimeCreated,Id,Message
         }
@@ -31,7 +32,7 @@ Clear
         return $result
     }
 
-    $dateForUptime = 1  #set the number of past days from which the fetching logs should start
+    $dateForUptime = 4 #set the number of past days from which the fetching logs should start
     $result = New-Object System.Collections.ArrayList  #To store logs of a day
     $result.Clear() #first make it empty
 
@@ -47,15 +48,16 @@ Clear
     Do
     {
         $logstartTime = (Get-Date).Date - (New-TimeSpan -Days $dateForUptime) #from which date start fetching logs
-        $result = getLogs($logstartTime)
+        $result = getLogs $logstartTime
         $dateForUptime++
         if($dateForUptime -ge ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month)))
         {
             $ErrorActionPreference = “Stop” 
         }
     }
-
     Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
+	
+	
 	$tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
     $preElement = $null
     foreach($item in $result)
@@ -69,30 +71,35 @@ Clear
     }
     $result.Clear()
     $result = $tempResult
-
-    $firstEventDate = $result[0].TimeCreated.Date
+	
+	#$result
+	$firstEventDate = $result[0].TimeCreated.Date
 
     #geting the logs for a perticular date
-    $logsof_firstEventDate = $result|Sort-Object TimeCreated|Where{$_.TimeCreated.Date -eq $firstEventDate}
+    $logsof_firstEventDate = $result |Sort-Object TimeCreated |Where{$_.TimeCreated.Date -eq $firstEventDate}
 
     $shutdown = New-Object System.Collections.ArrayList
     $startup = New-Object System.Collections.ArrayList
     $overall = New-Object System.TimeSpan
-
+	$findFirstLog = New-Object System.Collections.ArrayList
     #insert startup time 
     for ($i=0 ; $i -lt $logsof_firstEventDate.Length; $i++)
     {
         #on a perticular date if the first event is of shutdown, then Consider that system was on form the mid-night 12am of that date
         
-	if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
+		if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
         {
-	        $findFirstLog += $result | Sort-Object TimeCreated | `
-		where{$_.TimeCreated -lt $logsof_firstEventDate[0].TimeCreated} | `
-		where{$_.Id -eq 6005} | `		
-		| select-object -Last 1 
-		$logsof_firstEventDate += $findFirstLog[-1]
-            	$startup += $logsof_firstEventDate[0].TimeCreated
-		#$startup += $firstEventDate.Date;
+	        $counter = 1
+			do{
+				$latestDate = $firstEventDate.AddDays(-$counter)
+				$latestStartDate = $latestDate.AddDays(1)
+				#echo""
+				$findFirstLog.clear()
+				$findFirstLog = getLogs $latestDate $latestStartDate
+				$counter++
+				$latest6005 = $findFirstLog |  where{($_.TimeCreated.Date -eq $latestDate)} | where{$_.Id -eq 6005} | select-object -Last 1 | Select-Object TimeCreated
+			}until(($latest6005 -ne 6005) -or ($counter -gt 99))
+			$startup += $latest6005.TimeCreated
         }
         elseif($logsof_firstEventDate[$i].Id -eq 6005)
         {
@@ -100,20 +107,39 @@ Clear
         }
 		
     }
-
-    #insert shutdown time
+    
+	#insert shutdown time
     for($i=($logsof_firstEventDate.Length)-1;$i -ge 0 ; $i--)
-    {
-        #on a perticular date if the last event is of startup, then Consider that system was on till the mid-night 11:59:59pm of that date
-        if($logsof_firstEventDate[($logsof_firstEventDate.Length)-1].Id -eq 6005 -and $i -eq (($logsof_firstEventDate.Length)-1))
-        {
-            $shutdown += ($firstEventDate.Date + (New-TimeSpan -Hours 23 -Minutes 59 -Seconds 59));
-        }
-        elseif($logsof_firstEventDate[$i].Id -eq 6006)
-        {
-            $shutdown += ($logsof_firstEventDate[$i].TimeCreated);
-        }
-    }
+	{
+		#on a perticular date if the last event is of startup, then Consider that system was on till the mid-night 11:59:59pm of that date
+		if($logsof_firstEventDate[($logsof_firstEventDate.Length)-1].Id -eq 6005 -and $i -eq (($logsof_firstEventDate.Length)-1))
+		{
+			do{
+				$upComingStartDate = $firstEventDate.Date.AddDays(1)
+				$upComingEndDate = $firstEventDate.Date.AddDays(2)
+				if($upComingStartDate -eq (Get-Date).Date)
+				{
+					#$TimeCreated = Get-Date
+					$last6006 = Get-Date
+					$shutdown += $last6006
+				}
+				else
+				{
+					$last6006 = $result | where{($_.TimeCreated -ge $upComingStartDate) -and ($_.TimeCreated -le $upComingDate) } | where{$_.Id -eq 6006} | Select-Object -First 1
+				}
+				$upComingDate_Counter++
+			}until(($last6006.ID -eq 6006) -or ($upComingStartDate -eq (Get-Date).Date))
+			$shutdown += $last6006.TimeCreated
+		}
+		elseif($logsof_firstEventDate[$i].Id -eq 6006)
+		{
+			$shutdown += ($logsof_firstEventDate[$i].TimeCreated);
+		}
+	}
+
+	$startup
+	echo " "
+	$shutdown
 
     #finding overall uptime of a perticular date/day
     for($i=0;$i -lt $startup.Count; $i++)
