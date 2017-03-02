@@ -31,7 +31,24 @@ Clear
         }
         return $result
     }
-
+	
+	function removeDuplicates()
+	{
+            $tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
+ 	    $preElement = $null
+	    foreach($item in $result)
+	    {
+		if($item.Id -eq $preElement)
+		{
+		    Continue
+		}
+		$tempResult += $item
+		$preElement = $item.Id
+	    }
+	    $result.Clear()
+	    $result = $tempResult
+	}
+	
     $dateForUptime = 4 #set the number of past days from which the fetching logs should start
     $result = New-Object System.Collections.ArrayList  #To store logs of a day
     $result.Clear() #first make it empty
@@ -58,19 +75,8 @@ Clear
     Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
 	
 	
-	$tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
-    $preElement = $null
-    foreach($item in $result)
-    {
-        if($item.Id -eq $preElement)
-        {
-            Continue
-        }
-        $tempResult += $item
-        $preElement = $item.Id
-    }
-    $result.Clear()
-    $result = $tempResult
+	removeDuplicates()
+    
 	
 	#$result
 	$firstEventDate = $result[0].TimeCreated.Date
@@ -87,7 +93,7 @@ Clear
     {
         #on a perticular date if the first event is of shutdown, then Consider that system was on form the mid-night 12am of that date
         
-		if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
+	if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
         {
 	        $counter = 1
 			do{
@@ -114,21 +120,18 @@ Clear
 		#on a perticular date if the last event is of startup, then Consider that system was on till the mid-night 11:59:59pm of that date
 		if($logsof_firstEventDate[($logsof_firstEventDate.Length)-1].Id -eq 6005 -and $i -eq (($logsof_firstEventDate.Length)-1))
 		{
+			$upComingDate_Counter = 1
 			do{
-				$upComingStartDate = $firstEventDate.Date.AddDays(1)
-				$upComingEndDate = $firstEventDate.Date.AddDays(2)
-				if($upComingStartDate -eq (Get-Date).Date)
-				{
-					#$TimeCreated = Get-Date
-					$last6006 = Get-Date
-					$shutdown += $last6006
-				}
-				else
-				{
-					$last6006 = $result | where{($_.TimeCreated -ge $upComingStartDate) -and ($_.TimeCreated -le $upComingDate) } | where{$_.Id -eq 6006} | Select-Object -First 1
-				}
+				$upComingStartDate = $firstEventDate.Date.AddDays($upComingDate_Counter)
+				$upComingEndDate = $firstEventDate.Date.AddDays($upComingDate_Counter + 1)
+				$last6006 = $result | where{($_.TimeCreated -ge $upComingStartDate) -and ($_.TimeCreated -le $upComingDate) } | where{$_.Id -eq 6006} | Select-Object -First 1
 				$upComingDate_Counter++
-			}until(($last6006.ID -eq 6006) -or ($upComingStartDate -eq (Get-Date).Date))
+			}until(($last6006.ID -eq 6006) -or ($upComingEndDate -eq (Get-Date).Date))
+			
+			if($last6005 -eq $null)
+			{
+				$last6005 = (Get-Date)
+			}
 			$shutdown += $last6006.TimeCreated
 		}
 		elseif($logsof_firstEventDate[$i].Id -eq 6006)
@@ -151,25 +154,27 @@ Clear
 
     $overalluptime = "{0:00}d {1:00}h {2:00}m {3:00}s" -f $overall.Days,$overall.Hours,$overall.Minutes,$overall.Seconds;
     
-    try{
-        $ButtonType = [System.Windows.MessageBoxButton]::OK
-        $MessageBoxTitle = "Conserve Energy"
-        #$Messageboxbody = "Your System has been running for " + $overalluptime +" on " + $firstEventDate.ToShortDateString()
-        $Messageboxbody = "Your System has been running for " + $overalluptime+". Please remember to turn off your system and monitor at the end of the day"
-        
+    if($overall.Days -gt 2)
+    {
+	    try{
+		$ButtonType = [System.Windows.MessageBoxButton]::OK
+		$MessageBoxTitle = "Conserve Energy"
+		#$Messageboxbody = "Your System has been running for " + $overalluptime +" on " + $firstEventDate.ToShortDateString()
+		$Messageboxbody = "Your System has been running for " + $overalluptime+". Please remember to turn off your system and monitor at the end of the day"
 		$MessageIcon = [System.Windows.MessageBoxImage]::Information
-        [System.Windows.MessageBox]::Show($Messageboxbody,$MessageboxTitle,$ButtonType,$messageicon)
-    }
-    Catch{
-        $Path = "C:\Log"
-        $limit = (Get-Date).AddDays(-10)
-        Get-ChildItem -Path $Path -Recurse -Force | Where-Object { !$_.PSIsContainer } | sort CreationTime -Descending | select -Skip 2 | Remove-Item -Force
-        Get-ChildItem -Path $path -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } | Remove-Item -Force
-        $logName = "$(get-date -format 'yyyy-MM-dd_HH-mm-ss').txt"
-        $fullPath = $Path +"\"+ $logName
-        New-Item -path $Path -name $logName -itemtype file
-        Add-Content -Path $fullPath -Value $Error[0]
-        Break
+		[System.Windows.MessageBox]::Show($Messageboxbody,$MessageboxTitle,$ButtonType,$messageicon)
+	    }
+	    Catch{
+		$Path = "C:\Log"
+		$limit = (Get-Date).AddDays(-10)
+		Get-ChildItem -Path $Path -Recurse -Force | Where-Object { !$_.PSIsContainer } | sort CreationTime -Descending | select -Skip 2 | Remove-Item -Force
+		Get-ChildItem -Path $path -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } | Remove-Item -Force
+		$logName = "$(get-date -format 'yyyy-MM-dd_HH-mm-ss').txt"
+		$fullPath = $Path +"\"+ $logName
+		New-Item -path $Path -name $logName -itemtype file
+		Add-Content -Path $fullPath -Value $Error[0]
+		Break
+	    }
     }
 
 	function sendMail()
@@ -179,8 +184,8 @@ Clear
 		$message = new-object Net.Mail.MailMessage
 		$message.From = "skstpc.edu@gmail.com"
 		$message.To.Add("hardiik.thaker@infosys.com")
-		$message.Subject = "subject text here..."
-		$message.Body = "Your System was ON for " + $overalluptime +" on " + $firstEventDate.ToShortDateString()
+		$message.Subject = "Conserve Energy"
+		$message.Body = "Your System has been running for " + $overalluptime+ ". Please remember to turn off your system and monitor at the end of the day"
 		#$attachment = New-Object Net.Mail.Attachment($attachmentpath);
 		#$message.Attachments.Add($attachment);
 
@@ -190,6 +195,49 @@ Clear
 		$smtp.send($message)
 		#$attachment.Dispose();
 	}
-
-	#sendMail;
-#}
+	if($overall.Days -gt 4)
+	{
+		sendMail;
+	}
+	
+	function createChart()
+	{
+		
+	
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}
