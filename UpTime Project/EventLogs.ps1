@@ -2,8 +2,8 @@
 # EventLogs.ps1
 #
 Clear
-#PowerShell.exe -windowstyle hidden `
-#{
+PowerShell.exe -windowstyle hidden `
+{
     add-type -AssemblyName PresentationCore,PresentationFramework
     $ErrorActionPreference = "SilentlyContinue"
     
@@ -32,11 +32,11 @@ Clear
         return $result
     }
 	
-	function removeDuplicates()
+	function removeDuplicates($res)
 	{
-            $tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
+        $tempResult = New-Object System.Collections.ArrayList  #To store logs of a day
  	    $preElement = $null
-	    foreach($item in $result)
+	    foreach($item in $res)
 	    {
 		if($item.Id -eq $preElement)
 		{
@@ -45,11 +45,10 @@ Clear
 		$tempResult += $item
 		$preElement = $item.Id
 	    }
-	    $result.Clear()
-	    $result = $tempResult
+	    return $tempResult
 	}
 	
-    $dateForUptime = 4 #set the number of past days from which the fetching logs should start
+    $dateForUptime = 0 #set the number of past days from which the fetching logs should start
     $result = New-Object System.Collections.ArrayList  #To store logs of a day
     $result.Clear() #first make it empty
 
@@ -74,11 +73,10 @@ Clear
     }
     Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
 	
-	
-	removeDuplicates()
-    
+	$result = removeDuplicates $result
 	
 	#$result
+
 	$firstEventDate = $result[0].TimeCreated.Date
 
     #geting the logs for a perticular date
@@ -120,19 +118,33 @@ Clear
 		#on a perticular date if the last event is of startup, then Consider that system was on till the mid-night 11:59:59pm of that date
 		if($logsof_firstEventDate[($logsof_firstEventDate.Length)-1].Id -eq 6005 -and $i -eq (($logsof_firstEventDate.Length)-1))
 		{
-			$upComingDate_Counter = 1
-			do{
-				$upComingStartDate = $firstEventDate.Date.AddDays($upComingDate_Counter)
-				$upComingEndDate = $firstEventDate.Date.AddDays($upComingDate_Counter + 1)
-				$last6006 = $result | where{($_.TimeCreated -ge $upComingStartDate) -and ($_.TimeCreated -le $upComingDate) } | where{$_.Id -eq 6006} | Select-Object -First 1
-				$upComingDate_Counter++
-			}until(($last6006.ID -eq 6006) -or ($upComingEndDate -eq (Get-Date).Date))
-			
-			if($last6005 -eq $null)
+			if( $logsof_firstEventDate[($logsof_firstEventDate.Length)-1].TimeCreated.Date -eq (get-date).Date )
 			{
-				$last6005 = (Get-Date)
+				$last6006 = @{TimeCreated = (Get-Date)}
 			}
-			$shutdown += $last6006.TimeCreated
+			else
+			{
+				$upComingDate_Counter = 0
+				do{
+					$upComingStartDate = $firstEventDate.Date.AddDays($upComingDate_Counter)
+					$upComingEndDate = $firstEventDate.Date.AddDays($upComingDate_Counter + 1)
+					#$upComingStartDate
+					#$upComingEndDate
+					#$last6006 = 
+					$last6006 = $result | where{($_.TimeCreated -ge $upComingStartDate) -and ($_.TimeCreated -le $upComingEndDate) } | where{$_.Id -eq 6006} | Select-Object -First 1
+					$upComingDate_Counter++
+				}until(($last6006.ID -eq 6006) -or ($upComingEndDate -eq (Get-Date).Date.AddDays(1)))
+			}
+			if($last6006 -eq $null)
+			{
+				$last6006 = @{TimeCreated = (Get-Date)}
+				$shutdown += $last6006.TimeCreated
+			}
+			else
+			{
+				$shutdown += $last6006.TimeCreated
+			}
+				
 		}
 		elseif($logsof_firstEventDate[$i].Id -eq 6006)
 		{
@@ -154,7 +166,7 @@ Clear
 
     $overalluptime = "{0:00}d {1:00}h {2:00}m {3:00}s" -f $overall.Days,$overall.Hours,$overall.Minutes,$overall.Seconds;
     
-    if($overall.Days -gt 2)
+    if($overall.Days -ge 0)
     {
 	    try{
 		$ButtonType = [System.Windows.MessageBoxButton]::OK
@@ -195,49 +207,32 @@ Clear
 		$smtp.send($message)
 		#$attachment.Dispose();
 	}
-	if($overall.Days -gt 4)
+	if($overall.Days -gt 1)
 	{
 		sendMail;
 	}
 	
 	function createChart()
 	{
-		
 	
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+

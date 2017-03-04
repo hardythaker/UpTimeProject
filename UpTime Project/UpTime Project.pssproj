@@ -30,6 +30,10 @@
   <ItemGroup>
     <Compile Include=".ps1" />
     <Compile Include="EventLogs.ps1" />
+    <Compile Include="Test.ps1" />
+    <Compile Include="\Users\rithu\Desktop\UpTime.ps1">
+      <Link>UpTime.ps1</Link>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />
