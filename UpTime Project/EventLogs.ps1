@@ -2,8 +2,8 @@
 # EventLogs.ps1
 #
 Clear
-PowerShell.exe -windowstyle hidden `
-{
+#PowerShell.exe -windowstyle hidden `
+#{
     add-type -AssemblyName PresentationCore,PresentationFramework
     $ErrorActionPreference = "SilentlyContinue"
     
@@ -48,10 +48,10 @@ PowerShell.exe -windowstyle hidden `
 	    return $tempResult
 	}
 	
-    $dateForUptime = 0 #set the number of past days from which the fetching logs should start
+    $dateForUptime = 7#set the number of past days from which the fetching logs should start
     $result = New-Object System.Collections.ArrayList  #To store logs of a day
     $result.Clear() #first make it empty
-
+	#$result
     <#
 	fetching logs of yesterday. 
     #if not found then again try for last 1 Month.
@@ -76,22 +76,24 @@ PowerShell.exe -windowstyle hidden `
 	$result = removeDuplicates $result
 	
 	#$result
-
+	echo " "
 	$firstEventDate = $result[0].TimeCreated.Date
-
+	#$result
     #geting the logs for a perticular date
-    $logsof_firstEventDate = $result |Sort-Object TimeCreated |Where{$_.TimeCreated.Date -eq $firstEventDate}
-
+    $logsof_firstEventDate = New-Object System.Collections.ArrayList
+	$logsof_firstEventDate = $result | Sort-Object TimeCreated | Where{$_.TimeCreated.Date -eq $firstEventDate}
+	#$logsof_firstEventDate
     $shutdown = New-Object System.Collections.ArrayList
     $startup = New-Object System.Collections.ArrayList
     $overall = New-Object System.TimeSpan
 	$findFirstLog = New-Object System.Collections.ArrayList
     #insert startup time 
-    for ($i=0 ; $i -lt $logsof_firstEventDate.Length; $i++)
+	#$logsof_firstEventDate.Id.Length
+    for ($i=0 ; $i -le (($logsof_firstEventDate.Id.Length)-1); $i++)
     {
         #on a perticular date if the first event is of shutdown, then Consider that system was on form the mid-night 12am of that date
         
-	if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
+	    if(($logsof_firstEventDate[0].Id -eq 6006) -and ($i -eq 0))
         {
 	        $counter = 1
 			do{
@@ -111,27 +113,27 @@ PowerShell.exe -windowstyle hidden `
         }
 		
     }
-    
 	#insert shutdown time
-    for($i=($logsof_firstEventDate.Length)-1;$i -ge 0 ; $i--)
+	#$logsof_firstEventDate
+    for($i=(($logsof_firstEventDate.Id.Length)-1);$i -ge 0 ; $i--)
 	{
 		#on a perticular date if the last event is of startup, then Consider that system was on till the mid-night 11:59:59pm of that date
-		if($logsof_firstEventDate[($logsof_firstEventDate.Length)-1].Id -eq 6005 -and $i -eq (($logsof_firstEventDate.Length)-1))
+		if(($logsof_firstEventDate[($logsof_firstEventDate.Id.Length)-1].Id -eq 6005) -and ($i -eq (($logsof_firstEventDate.Id.Length)-1)))
 		{
-			if( $logsof_firstEventDate[($logsof_firstEventDate.Length)-1].TimeCreated.Date -eq (get-date).Date )
+			if($logsof_firstEventDate[($logsof_firstEventDate.Id.Length)-1].TimeCreated.Date -eq (Get-Date).Date)
 			{
 				$last6006 = @{TimeCreated = (Get-Date)}
 			}
 			else
 			{
-				$upComingDate_Counter = 0
+				$upComingDate_Counter = 1
 				do{
 					$upComingStartDate = $firstEventDate.Date.AddDays($upComingDate_Counter)
 					$upComingEndDate = $firstEventDate.Date.AddDays($upComingDate_Counter + 1)
 					#$upComingStartDate
 					#$upComingEndDate
-					#$last6006 = 
 					$last6006 = $result | where{($_.TimeCreated -ge $upComingStartDate) -and ($_.TimeCreated -le $upComingEndDate) } | where{$_.Id -eq 6006} | Select-Object -First 1
+					#$last6006
 					$upComingDate_Counter++
 				}until(($last6006.ID -eq 6006) -or ($upComingEndDate -eq (Get-Date).Date.AddDays(1)))
 			}
@@ -151,7 +153,8 @@ PowerShell.exe -windowstyle hidden `
 			$shutdown += ($logsof_firstEventDate[$i].TimeCreated);
 		}
 	}
-
+	#$logsof_firstEventDate.Length
+	
 	$startup
 	echo " "
 	$shutdown
@@ -216,7 +219,7 @@ PowerShell.exe -windowstyle hidden `
 	{
 	
 	}
-}
+#}
 	
 	
 	

@@ -4,7 +4,7 @@
 function getLogs($logstartTime, $logEndTime = (Get-Date))
 {
     try{
-        $logs = Get-WinEvent -MaxEvents 1000 -FilterHashTable `
+        $result = Get-WinEvent -MaxEvents 1000 -FilterHashTable `
         @{
             LogName = "System";
             ID = 6005,6006 ; #42,1 For sleep Time Logs
@@ -22,11 +22,26 @@ function getLogs($logstartTime, $logEndTime = (Get-Date))
         $MessageIcon = [System.Windows.MessageBoxImage]::Information
         [System.Windows.MessageBox]::Show($Messageboxbody,$MessageboxTitle,$ButtonType,$messageicon)
     }
-    return $logs
+    return $result
 }
-$dateForUptime = 6;  #set the number of past days from which the fetching logs should start
+$dateForUptime = 0;  #set the number of past days from which the fetching logs should start
 $result = New-Object System.Collections.ArrayList;  #To store logs of a day
 $result.Clear()
 
-$result = getLogs (Get-Date).AddDays(-7).Date (Get-Date).AddDays(-5).Date
-$result
+Do
+{
+    $logstartTime = (Get-Date).Date - (New-TimeSpan -Days $dateForUptime) #from which date start fetching logs
+    $result = getLogs $logstartTime
+    $dateForUptime++
+    if($dateForUptime -ge ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month)))
+    {
+        $ErrorActionPreference = “Stop” 
+    }
+}
+Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
+#$result[0]
+$firstEventDate = $result[0].TimeCreated.Date
+#$firstEventDate
+#geting the logs for a perticular date
+$logsof_firstEventDate = $result | Sort-Object TimeCreated | Where{$_.TimeCreated.Date -eq $firstEventDate}
+$logsof_firstEventDate.Id.Count

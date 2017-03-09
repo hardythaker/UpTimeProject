@@ -23,15 +23,16 @@ function getLogs($logstartTime, $logEndTime = (Get-Date))
     return $result
 }
 
-$dateForUptime = 1;  #set the number of past days from which the fetching logs should start
+$dateForUptime = 0;  #set the number of past days from which the fetching logs should start
 $result = New-Object System.Collections.ArrayList;  #To store logs of a day
-$result.Clear()
+#$result.Clear()
 
 
 Do
 {
-    $logstartTime = (Get-Date).Date - (New-TimeSpan -Days $dateForUptime) #from which date start fetching logs
-    $result = getLogs $logstartTime
+    $logstartTime = (Get-Date).Date.AddDays(-$dateForUptime) #from which date start fetching logs
+    #$logstartTime
+	$result = getLogs $logstartTime
     $dateForUptime++
     if($dateForUptime -ge ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month)))
     {
@@ -39,12 +40,12 @@ Do
     }
 }
 Until(($result.Count -ne 0) -or ($dateForUptime -gt ([DateTime]::DaysInMonth([DateTime]::Now.Year,[DateTime]::Now.Month))))
-
+#$result
 $firstEventDate = $result[0].TimeCreated.Date
-
+#$firstEventDate
 #geting the logs for a perticular date
 $logsof_firstEventDate = $result| Sort-Object TimeCreated | Where{$_.TimeCreated.Date -eq $firstEventDate}
-#$logsof_firstEventDate
+$logsof_firstEventDate.Id.Count
 $shutdown = New-Object System.Collections.ArrayList
 $startup = New-Object System.Collections.ArrayList
 $overall = New-Object System.TimeSpan
