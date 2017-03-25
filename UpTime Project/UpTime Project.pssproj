@@ -29,6 +29,7 @@
   <ItemGroup />
   <ItemGroup>
     <Compile Include=".ps1" />
+    <Compile Include="Chart.ps1" />
     <Compile Include="EventLogs.ps1" />
     <Compile Include="Test.ps1" />
     <Compile Include="\Users\rithu\Desktop\UpTime.ps1">
