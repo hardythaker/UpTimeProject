@@ -48,7 +48,7 @@ Clear
 	    return $tempResult
 	}
 	
-    $dateForUptime = 7#set the number of past days from which the fetching logs should start
+    $dateForUptime = 0#set the number of past days from which the fetching logs should start
     $result = New-Object System.Collections.ArrayList  #To store logs of a day
     $result.Clear() #first make it empty
 	#$result
